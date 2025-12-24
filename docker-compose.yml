@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  frontend-prod:
+    build: ./frontend-prod
+    volumes:
+      - ./nginx-prod.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - lpi-npm-network
+    container_name: lpi_abata_frontend_prod
+
+  backend-prod:
+    build: ./backend-prod
+    ports:
+      - "5002:5001"
+    environment:
+      - DB_HOST=database-prod
+      - DB_USER=lpi_user
+      - DB_PASSWORD=AbataSecure123!
+      - DB_NAME=lpi_production_db
+      - DB_PORT=5432
+      - PORT=5001
+    networks:
+      - lpi-npm-network
+    container_name: lpi_abata_backend_prod
+    healthcheck:
+      test: ["CMD", "sh", "-c", "timeout 5 bash -c 'cat < /dev/null > /dev/tcp/localhost/5001'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  database-prod:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=lpi_production_db
+      - POSTGRES_USER=lpi_user
+      - POSTGRES_PASSWORD=AbataSecure123!
+    volumes:
+      - postgres_lpi_prod_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - lpi-npm-network
+    container_name: lpi_abata_database_prod
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lpi_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_lpi_prod_data:
+
+networks:
+  lpi-npm-network:
+    external: true
